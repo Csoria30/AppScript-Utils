@@ -5,6 +5,12 @@ var SheetFormat = {
    * @param {GoogleAppsScript.Spreadsheet.Range} rango
    */
   centrarRango: function (rango) {
+    if (!rango || typeof rango.setHorizontalAlignment !== "function") {
+      throw new Error(
+        "SheetFormat.centrarRango: debe recibir un rango valido de SpreadsheetApp.",
+      );
+    }
+
     rango.setHorizontalAlignment("center").setVerticalAlignment("middle");
   },
 };
