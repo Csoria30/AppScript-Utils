@@ -94,7 +94,7 @@ Utilidades/
 |----------|----------|
 | [Funciones Base](docs/basicas.md) | Operaciones básicas sobre Sheets |
 | [Rangos](docs/rangos.md) | Utilidades para rangos y columnas |
-| [Automatizaciones](docs/rangos.md#automatizaciones-onedit) | Helpers para eventos |
+| [Automatizaciones](docs/automatizaciones) | Helpers para eventos |
 | [Menús](docs/menus.md) | Creación de menús personalizados |
 | [Formato](docs/formatos.md) | Aplicación de estilos |
 | [Fechas](docs/fechas.md) | Utilidades de fecha y hora |
