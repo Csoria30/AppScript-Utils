@@ -446,7 +446,7 @@ function formatearComoTexto(e, columnas) {
   var totalFilas = rango.getNumRows();
 
   var columnasObjetivo = columnas.map(function (c) {
-    return typeof c === "number" ? c : columnaAIndice(String(c).toUpperCase());
+    return typeof c === "number" ? c : columnToIndex(String(c).toUpperCase());
   });
 
   for (var i = 0; i < columnasObjetivo.length; i++) {
@@ -466,10 +466,111 @@ function formatearComoTexto(e, columnas) {
   }
 }
 
-function aplicarFormatoColumna(e, columnas) {
-  formatearComoTexto(e, columnas);
+function parsearDuracion(texto) {
+  if (!texto || typeof texto !== "string") return null;
+
+  var match = texto.match(/^\s*(\d+)\s*d\s+(\d+)\s*h\s+(\d+)\s*m\s*$/i);
+
+  if (!match) return null;
+
+  var dias = parseInt(match[1], 10);
+  var horas = parseInt(match[2], 10);
+  var mins = parseInt(match[3], 10);
+
+  return dias * 1440 + horas * 60 + mins;
 }
 
-function columnaAIndice(columna) {
-  return columnToIndex(columna);
+function calcularDiasBK(
+  nombreHoja,
+  colFecha,
+  colTextoBK,
+  colMinutosBL,
+  filaInicio,
+) {
+  var hojaObjetivo = nombreHoja || "DATA";
+  var columnaFecha = colFecha || 36;
+  var columnaTexto = colTextoBK || 63;
+  var columnaMinutos = colMinutosBL || 64;
+  var filaInicial = filaInicio || 4;
+
+  if (!Number.isInteger(filaInicial) || filaInicial < 1) {
+    throw new Error(
+      "calcularDiasBK: 'filaInicio' debe ser un entero mayor o igual a 1.",
+    );
+  }
+
+  var hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(hojaObjetivo);
+
+  if (!hoja) {
+    throw new Error(
+      'calcularDiasBK: no existe la hoja "' + hojaObjetivo + '".',
+    );
+  }
+
+  var ultimaFila = hoja.getLastRow();
+
+  if (ultimaFila < filaInicial) {
+    return {
+      filasProcesadas: 0,
+    };
+  }
+
+  var numFilas = ultimaFila - filaInicial + 1;
+
+  hoja
+    .getRange(filaInicial, columnaFecha, numFilas, 1)
+    .setNumberFormat("dd/MM/yyyy HH:mm:ss");
+
+  var rangoFechas = hoja
+    .getRange(filaInicial, columnaFecha, numFilas, 1)
+    .getValues();
+  var ahora = new Date();
+
+  var textoBK = [];
+  var minutosBL = [];
+
+  for (var i = 0; i < rangoFechas.length; i++) {
+    var raw = rangoFechas[i][0];
+
+    if (!raw) {
+      textoBK.push([""]);
+      minutosBL.push([""]);
+      continue;
+    }
+
+    var fecha = raw instanceof Date ? raw : new Date(raw);
+
+    if (isNaN(fecha.getTime())) {
+      textoBK.push([""]);
+      minutosBL.push([""]);
+      continue;
+    }
+
+    var diffMs = ahora - fecha;
+
+    if (diffMs < 0) {
+      textoBK.push([""]);
+      minutosBL.push([""]);
+      continue;
+    }
+
+    var dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    var horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    var minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    var totalMinutos = dias * 1440 + horas * 60 + minutos;
+
+    textoBK.push([dias + "d " + horas + "h " + minutos + "m"]);
+    minutosBL.push([totalMinutos]);
+  }
+
+  hoja
+    .getRange(filaInicial, columnaTexto, textoBK.length, 1)
+    .setValues(textoBK);
+  hoja
+    .getRange(filaInicial, columnaMinutos, minutosBL.length, 1)
+    .setValues(minutosBL);
+
+  return {
+    filasProcesadas: numFilas,
+  };
 }
