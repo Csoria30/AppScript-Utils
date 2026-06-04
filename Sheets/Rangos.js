@@ -1,10 +1,13 @@
 var SheetUtils = {
   /**
-   * Convierte una columna de Sheets a su índice numérico.
-   * A = 1, Z = 26, AA = 27, AB = 28...
+   * Convierte letras de columna de Google Sheets a índice numérico.
    *
-   * @param {string} columna
-   * @returns {number}
+   * Ejemplos:
+   * A = 1, Z = 26, AA = 27, BL = 64.
+   *
+   * @param {string} columna Columna en formato A1.
+   * @returns {number} Índice numérico de la columna.
+   * @throws {Error} Si el valor recibido no es válido.
    */
   columnaIndice: function (columna) {
     if (!columna || typeof columna !== "string") {
@@ -30,25 +33,49 @@ var SheetUtils = {
     return resultado;
   },
 
+  columnToIndex: function (col) {
+    if (typeof col === "number") return col;
+    return this.columnaIndice(String(col));
+  },
+
   /**
-   * Limpia el contenido de un rango de datos.
+   * Limpia el contenido de un bloque de datos en una hoja.
+   *
+   * Permite borrar información desde una fila y columna iniciales
+   * hasta una fila o cantidad de columnas determinadas.
+   *
+   * Si no se especifican `cantidadColumnas` o `filaFinal`,
+   * se utilizarán los límites actuales de la hoja.
    *
    * @param {string} nombreHoja Nombre de la hoja.
    * @param {number} filaInicial Fila desde la que comienza la limpieza.
-   * @param {number} columnaInicial Columna inicial.
+   * @param {number} columnaInicial Columna desde la que comienza la limpieza.
    * @param {number} [cantidadColumnas] Cantidad de columnas a limpiar.
    *                                    Si se omite, utiliza hasta la última columna con datos.
    * @param {number} [filaFinal] Última fila a limpiar.
    *                             Si se omite, utiliza la última fila con datos.
-   * @returns {{filasLimpiadas:number, columnasLimpiadas:number}} Resumen de limpieza.
+   *
+   * @returns {{
+   *   filasLimpiadas: number,
+   *   columnasLimpiadas: number
+   * }} Resumen de la operación realizada.
+   *
+   * @throws {Error}
+   * Si `nombreHoja` es inválido o la hoja no existe.
+   *
+   * @throws {Error}
+   * Si los parámetros numéricos no cumplen las validaciones requeridas.
    */
   limpiarRangoDatos: function (
     nombreHoja,
     filaInicial,
     columnaInicial,
-    cantidadColumnas,
+    columnaFinal,
     filaFinal,
   ) {
+    columnaInicial = this.columnToIndex(columnaInicial);
+    columnaFinal = this.columnToIndex(columnaFinal);
+
     if (!nombreHoja || typeof nombreHoja !== "string") {
       throw new Error(
         "SheetUtils.limpiarRangoDatos: 'nombreHoja' debe ser un texto no vacio.",
@@ -63,16 +90,13 @@ var SheetUtils = {
 
     if (!Number.isInteger(columnaInicial) || columnaInicial < 1) {
       throw new Error(
-        "SheetUtils.limpiarRangoDatos: 'columnaInicial' debe ser un entero mayor o igual a 1.",
+        "SheetUtils.limpiarRangoDatos: 'columnaInicial' debe ser una columna válida.",
       );
     }
 
-    if (
-      cantidadColumnas !== undefined &&
-      (!Number.isInteger(cantidadColumnas) || cantidadColumnas < 1)
-    ) {
+    if (!Number.isInteger(columnaFinal) || columnaFinal < columnaInicial) {
       throw new Error(
-        "SheetUtils.limpiarRangoDatos: 'cantidadColumnas' debe ser un entero mayor o igual a 1.",
+        "SheetUtils.limpiarRangoDatos: 'columnaFinal' debe ser mayor o igual a 'columnaInicial'.",
       );
     }
 
@@ -89,7 +113,9 @@ var SheetUtils = {
       SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nombreHoja);
 
     if (!hoja) {
-      throw new Error(`No existe la hoja "${nombreHoja}"`);
+      throw new Error(
+        `SheetUtils.limpiarRangoDatos: no existe la hoja "${nombreHoja}".`,
+      );
     }
 
     const ultimaFila = filaFinal || hoja.getLastRow();
@@ -101,16 +127,7 @@ var SheetUtils = {
       };
     }
 
-    const columnas =
-      cantidadColumnas || hoja.getLastColumn() - columnaInicial + 1;
-
-    if (columnas < 1) {
-      return {
-        filasLimpiadas: 0,
-        columnasLimpiadas: 0,
-      };
-    }
-
+    const columnas = columnaFinal - columnaInicial + 1;
     const filas = ultimaFila - filaInicial + 1;
 
     hoja.getRange(filaInicial, columnaInicial, filas, columnas).clearContent();
@@ -120,192 +137,196 @@ var SheetUtils = {
       columnasLimpiadas: columnas,
     };
   },
-};
 
-function setTimestampOnEdit(
-  e,
-  sheetName,
-  watchCol,
-  stampCol,
-  startRow,
-  clearStampOnEmpty,
-) {
-  if (!e || !e.range) return;
-  var range = e.range;
-  var sheet = range.getSheet();
-  if (sheet.getName() !== sheetName) return;
+  setTimestampOnEdit: function (
+    e,
+    sheetName,
+    watchCol,
+    stampCol,
+    startRow,
+    clearStampOnEmpty,
+  ) {
+    if (!e || !e.range) return;
+    var range = e.range;
+    var sheet = range.getSheet();
+    if (sheet.getName() !== sheetName) return;
 
-  startRow = startRow || 2;
-  if (clearStampOnEmpty === undefined) clearStampOnEmpty = true;
+    startRow = startRow || 2;
+    if (clearStampOnEmpty === undefined) clearStampOnEmpty = true;
 
-  var watchIndex =
-    typeof watchCol === "number" ? watchCol : columnToIndex(watchCol);
-  var stampIndex =
-    typeof stampCol === "number" ? stampCol : columnToIndex(stampCol);
+    var watchIndex = SheetUtils.columnToIndex(watchCol);
+    var stampIndex = SheetUtils.columnToIndex(stampCol);
 
-  var editFirstCol = range.getColumn();
-  var editLastCol = editFirstCol + range.getNumColumns() - 1;
-  if (watchIndex < editFirstCol || watchIndex > editLastCol) return;
+    var editFirstCol = range.getColumn();
+    var editLastCol = editFirstCol + range.getNumColumns() - 1;
+    if (watchIndex < editFirstCol || watchIndex > editLastCol) return;
 
-  var firstRow = range.getRow();
-  var lastRow = firstRow + range.getNumRows() - 1;
-  var procStart = Math.max(firstRow, startRow);
-  var numRows = lastRow - procStart + 1;
-  if (numRows <= 0) return;
+    var firstRow = range.getRow();
+    var lastRow = firstRow + range.getNumRows() - 1;
+    var procStart = Math.max(firstRow, startRow);
+    var numRows = lastRow - procStart + 1;
+    if (numRows <= 0) return;
 
-  var watchVals = sheet.getRange(procStart, watchIndex, numRows, 1).getValues();
-  var stampRange = sheet.getRange(procStart, stampIndex, numRows, 1);
-  var existingStamps = stampRange.getValues();
-  var stampValues = [];
-  var now = new Date();
+    var watchVals = sheet
+      .getRange(procStart, watchIndex, numRows, 1)
+      .getValues();
+    var stampRange = sheet.getRange(procStart, stampIndex, numRows, 1);
+    var existingStamps = stampRange.getValues();
+    var stampValues = [];
+    var now = new Date();
 
-  for (var i = 0; i < watchVals.length; i++) {
-    var v = watchVals[i][0];
-    if (v !== "" && v !== null) {
-      stampValues.push([now]);
-    } else {
-      stampValues.push([clearStampOnEmpty ? "" : existingStamps[i][0]]);
+    for (var i = 0; i < watchVals.length; i++) {
+      var v = watchVals[i][0];
+      if (v !== "" && v !== null) {
+        stampValues.push([now]);
+      } else {
+        stampValues.push([clearStampOnEmpty ? "" : existingStamps[i][0]]);
+      }
     }
-  }
 
-  stampRange.setValues(stampValues);
-}
+    stampRange.setValues(stampValues);
+  },
 
-/**
- * Convierte en un link el valor de una celda, concatenendo una url base.
- *
- * @param {string} sheetName
- * @param {number} watchCol
- * @param {number} startRow
- * @param {string} urlBase
- * @param {boolean} clearOnEmpty
- * @returns {number}
- */
-function setHyperlinkInSameCellOnEdit(
-  e,
-  sheetName,
-  watchCol,
-  startRow,
-  urlBase,
-  clearOnEmpty,
-) {
-  if (!e || !e.range) return;
-  var range = e.range;
-  var sheet = range.getSheet();
-  if (sheet.getName() !== sheetName) return;
+  /**
+   * Convierte en un link el valor de una celda, concatenendo una url base.
+   *
+   * @param {string} sheetName
+   * @param {number} watchCol
+   * @param {number} startRow
+   * @param {string} urlBase
+   * @param {boolean} clearOnEmpty
+   * @returns {number}
+   */
+  setHyperlinkInSameCellOnEdit: function (
+    e,
+    sheetName,
+    watchCol,
+    startRow,
+    urlBase,
+    clearOnEmpty,
+  ) {
+    /* SpreadsheetApp.getActive().toast(
+      "Entró a la función de biblioteca",
+      "DEBUG",
+      3,
+    ); */
 
-  startRow = startRow || 2;
-  if (clearOnEmpty === undefined) clearOnEmpty = true;
+    if (!e || !e.range) return;
+    var range = e.range;
+    var sheet = range.getSheet();
+    if (sheet.getName() !== sheetName) return;
 
-  var watchIndex =
-    typeof watchCol === "number" ? watchCol : columnToIndex(watchCol);
+    startRow = startRow || 2;
+    if (clearOnEmpty === undefined) clearOnEmpty = true;
 
-  var editFirstCol = range.getColumn();
-  var editLastCol = editFirstCol + range.getNumColumns() - 1;
-  if (watchIndex < editFirstCol || watchIndex > editLastCol) return;
+    var watchIndex = SheetUtils.columnToIndex(watchCol);
 
-  var firstRow = range.getRow();
-  var lastRow = firstRow + range.getNumRows() - 1;
-  var procStart = Math.max(firstRow, startRow);
-  var numRows = lastRow - procStart + 1;
-  if (numRows <= 0) return;
+    var editFirstCol = range.getColumn();
+    var editLastCol = editFirstCol + range.getNumColumns() - 1;
+    if (watchIndex < editFirstCol || watchIndex > editLastCol) return;
 
-  var vals = sheet.getRange(procStart, watchIndex, numRows, 1).getValues();
-  var richArray = [];
+    var firstRow = range.getRow();
+    var lastRow = firstRow + range.getNumRows() - 1;
+    var procStart = Math.max(firstRow, startRow);
+    var numRows = lastRow - procStart + 1;
+    if (numRows <= 0) return;
 
-  for (var i = 0; i < vals.length; i++) {
-    var v = vals[i][0];
-    if (v !== "" && v !== null && v !== undefined) {
-      var texto = String(v);
-      var link = (urlBase || "") + texto;
-      var rich = SpreadsheetApp.newRichTextValue()
-        .setText(texto)
-        .setLinkUrl(link)
-        .build();
-      richArray.push([rich]);
-    } else if (clearOnEmpty) {
-      richArray.push([SpreadsheetApp.newRichTextValue().setText("").build()]);
-    } else {
-      var existing = sheet
-        .getRange(procStart + i, watchIndex)
-        .getRichTextValue();
-      richArray.push([
-        existing || SpreadsheetApp.newRichTextValue().setText("").build(),
-      ]);
+    var vals = sheet.getRange(procStart, watchIndex, numRows, 1).getValues();
+    var richArray = [];
+
+    for (var i = 0; i < vals.length; i++) {
+      var v = vals[i][0];
+      if (v !== "" && v !== null && v !== undefined) {
+        var texto = String(v);
+        var link = (urlBase || "") + texto;
+        var rich = SpreadsheetApp.newRichTextValue()
+          .setText(texto)
+          .setLinkUrl(link)
+          .build();
+        richArray.push([rich]);
+      } else if (clearOnEmpty) {
+        richArray.push([SpreadsheetApp.newRichTextValue().setText("").build()]);
+      } else {
+        var existing = sheet
+          .getRange(procStart + i, watchIndex)
+          .getRichTextValue();
+        richArray.push([
+          existing || SpreadsheetApp.newRichTextValue().setText("").build(),
+        ]);
+      }
     }
-  }
 
-  sheet
-    .getRange(procStart, watchIndex, numRows, 1)
-    .setRichTextValues(richArray);
-}
+    sheet
+      .getRange(procStart, watchIndex, numRows, 1)
+      .setRichTextValues(richArray);
+  },
 
-/**
- *  Setea el correo de la session activa en una celda, al modificar x col
- * @param {sting} sheetName
- * @param {number} watchCol
- * @param {number} emailCol
- * @param {number} startRow
- * @param {boolean} clearOnEmpty
- * @returns
- */
-function setUserEmailOnEdit(
-  e,
-  sheetName,
-  watchCol,
-  emailCol,
-  startRow,
-  clearOnEmpty,
-) {
-  if (!e || !e.range) return;
-  var range = e.range;
-  var sheet = range.getSheet();
-  if (sheet.getName() !== sheetName) return;
+  /**
+   *  Setea el correo de la session activa en una celda, al modificar x col
+   * @param {sting} sheetName
+   * @param {number} watchCol
+   * @param {number} emailCol
+   * @param {number} startRow
+   * @param {boolean} clearOnEmpty
+   * @returns
+   */
+  setUserEmailOnEdit: function (
+    e,
+    sheetName,
+    watchCol,
+    emailCol,
+    startRow,
+    clearOnEmpty,
+  ) {
+    if (!e || !e.range) return;
+    var range = e.range;
+    var sheet = range.getSheet();
+    if (sheet.getName() !== sheetName) return;
 
-  startRow = startRow || 2;
-  if (typeof clearOnEmpty === "undefined") clearOnEmpty = true;
+    startRow = startRow || 2;
+    if (typeof clearOnEmpty === "undefined") clearOnEmpty = true;
 
-  var watchIndex =
-    typeof watchCol === "number" ? watchCol : columnToIndex(watchCol);
-  var emailIndex =
-    typeof emailCol === "number" ? emailCol : columnToIndex(emailCol);
+    var watchIndex = SheetUtils.columnToIndex(watchCol);
+    var emailIndex = SheetUtils.columnToIndex(emailCol);
 
-  var editFirstCol = range.getColumn();
-  var editLastCol = editFirstCol + range.getNumColumns() - 1;
-  if (watchIndex < editFirstCol || watchIndex > editLastCol) return;
+    var editFirstCol = range.getColumn();
+    var editLastCol = editFirstCol + range.getNumColumns() - 1;
+    if (watchIndex < editFirstCol || watchIndex > editLastCol) return;
 
-  var firstRow = range.getRow();
-  var lastRow = firstRow + range.getNumRows() - 1;
-  var procStart = Math.max(firstRow, startRow);
-  var numRows = lastRow - procStart + 1;
-  if (numRows <= 0) return;
+    var firstRow = range.getRow();
+    var lastRow = firstRow + range.getNumRows() - 1;
+    var procStart = Math.max(firstRow, startRow);
+    var numRows = lastRow - procStart + 1;
+    if (numRows <= 0) return;
 
-  var watchVals = sheet.getRange(procStart, watchIndex, numRows, 1).getValues();
-  var existingEmails = sheet
-    .getRange(procStart, emailIndex, numRows, 1)
-    .getValues();
-  var out = [];
+    var watchVals = sheet
+      .getRange(procStart, watchIndex, numRows, 1)
+      .getValues();
+    var existingEmails = sheet
+      .getRange(procStart, emailIndex, numRows, 1)
+      .getValues();
+    var out = [];
 
-  var userEmail = "";
-  try {
-    userEmail = Session.getActiveUser().getEmail();
-  } catch (err) {
-    userEmail = "";
-  }
-
-  for (var i = 0; i < watchVals.length; i++) {
-    var val = watchVals[i][0];
-    if (val !== "" && val !== null && val !== undefined) {
-      out.push([userEmail || existingEmails[i][0] || ""]);
-    } else {
-      out.push([clearOnEmpty ? "" : existingEmails[i][0]]);
+    var userEmail = "";
+    try {
+      userEmail = Session.getActiveUser().getEmail();
+    } catch (err) {
+      userEmail = "";
     }
-  }
 
-  sheet.getRange(procStart, emailIndex, numRows, 1).setValues(out);
-}
+    for (var i = 0; i < watchVals.length; i++) {
+      var val = watchVals[i][0];
+      if (val !== "" && val !== null && val !== undefined) {
+        out.push([userEmail || existingEmails[i][0] || ""]);
+      } else {
+        out.push([clearOnEmpty ? "" : existingEmails[i][0]]);
+      }
+    }
 
-/**
+    sheet.getRange(procStart, emailIndex, numRows, 1).setValues(out);
+  },
+
+  /**
  *
   No permite valores duplicados en una col
  * @param {string} sheetName
@@ -316,261 +337,261 @@ function setUserEmailOnEdit(
  * @returns
  */
 
-function bloquearDuplicadosEnColumnaOnEdit(
-  e,
-  sheetName,
-  watchCol,
-  startRow,
-  ignoreCase,
-  trimValues,
-) {
-  if (!e || !e.range) return true;
+  bloquearDuplicadosEnColumnaOnEdit: function (
+    e,
+    sheetName,
+    watchCol,
+    startRow,
+    ignoreCase,
+    trimValues,
+  ) {
+    if (!e || !e.range) return true;
 
-  var range = e.range;
-  var sheet = range.getSheet();
-  if (sheetName && sheet.getName() !== sheetName) return true;
+    var range = e.range;
+    var sheet = range.getSheet();
+    if (sheetName && sheet.getName() !== sheetName) return true;
 
-  startRow = startRow || 2;
-  if (ignoreCase === undefined) ignoreCase = true;
-  if (trimValues === undefined) trimValues = true;
+    startRow = startRow || 2;
+    if (ignoreCase === undefined) ignoreCase = true;
+    if (trimValues === undefined) trimValues = true;
 
-  var watchIndex =
-    typeof watchCol === "number" ? watchCol : columnToIndex(watchCol);
+    var watchIndex = SheetUtils.columnToIndex(watchCol);
 
-  var editFirstCol = range.getColumn();
-  var editLastCol = editFirstCol + range.getNumColumns() - 1;
-  if (watchIndex < editFirstCol || watchIndex > editLastCol) return true;
+    var editFirstCol = range.getColumn();
+    var editLastCol = editFirstCol + range.getNumColumns() - 1;
+    if (watchIndex < editFirstCol || watchIndex > editLastCol) return true;
 
-  var firstRow = range.getRow();
-  var lastRow = firstRow + range.getNumRows() - 1;
-  var procStart = Math.max(firstRow, startRow);
-  if (lastRow < procStart) return true;
+    var firstRow = range.getRow();
+    var lastRow = firstRow + range.getNumRows() - 1;
+    var procStart = Math.max(firstRow, startRow);
+    if (lastRow < procStart) return true;
 
-  var totalRows = sheet.getLastRow() - startRow + 1;
-  if (totalRows <= 0) return true;
+    var totalRows = sheet.getLastRow() - startRow + 1;
+    if (totalRows <= 0) return true;
 
-  var colValues = sheet
-    .getRange(startRow, watchIndex, totalRows, 1)
-    .getValues();
-  var editValues = sheet
-    .getRange(procStart, watchIndex, lastRow - procStart + 1, 1)
-    .getValues();
-  var normalizedEdited = [];
-  var duplicatesToReject = {};
+    var colValues = sheet
+      .getRange(startRow, watchIndex, totalRows, 1)
+      .getValues();
+    var editValues = sheet
+      .getRange(procStart, watchIndex, lastRow - procStart + 1, 1)
+      .getValues();
+    var normalizedEdited = [];
+    var duplicatesToReject = {};
 
-  function normalizeValue(v) {
-    if (v === null || v === undefined || v === "") return "";
-    var s = String(v);
-    if (trimValues) s = s.trim();
-    if (ignoreCase) s = s.toLowerCase();
-    return s;
-  }
-
-  for (var i = 0; i < editValues.length; i++) {
-    normalizedEdited.push(normalizeValue(editValues[i][0]));
-  }
-
-  var counts = {};
-  for (var r = 0; r < colValues.length; r++) {
-    var norm = normalizeValue(colValues[r][0]);
-    if (!norm) continue;
-    if (!counts[norm]) counts[norm] = 0;
-    counts[norm]++;
-  }
-
-  for (var j = 0; j < normalizedEdited.length; j++) {
-    var key = normalizedEdited[j];
-    if (!key) continue;
-    if (counts[key] > 1) duplicatesToReject[key] = true;
-  }
-
-  var duplicateKeys = Object.keys(duplicatesToReject);
-  if (!duplicateKeys.length) return true;
-
-  var replaceValues = [];
-  for (var k = 0; k < editValues.length; k++) {
-    var keyEdited = normalizedEdited[k];
-    var current = editValues[k][0];
-
-    if (!keyEdited || !duplicatesToReject[keyEdited]) {
-      replaceValues.push([current]);
-      continue;
+    function normalizeValue(v) {
+      if (v === null || v === undefined || v === "") return "";
+      var s = String(v);
+      if (trimValues) s = s.trim();
+      if (ignoreCase) s = s.toLowerCase();
+      return s;
     }
 
-    var isSingleCellEdit =
-      range.getNumRows() === 1 && range.getNumColumns() === 1;
-    if (isSingleCellEdit && e.oldValue !== undefined) {
-      replaceValues.push([e.oldValue]);
-    } else {
-      replaceValues.push([""]);
+    for (var i = 0; i < editValues.length; i++) {
+      normalizedEdited.push(normalizeValue(editValues[i][0]));
     }
-  }
 
-  sheet
-    .getRange(procStart, watchIndex, replaceValues.length, 1)
-    .setValues(replaceValues);
+    var counts = {};
+    for (var r = 0; r < colValues.length; r++) {
+      var norm = normalizeValue(colValues[r][0]);
+      if (!norm) continue;
+      if (!counts[norm]) counts[norm] = 0;
+      counts[norm]++;
+    }
 
-  var msg =
-    "No se permiten duplicados en la columna " +
-    watchCol +
-    ". Valor duplicado eliminado.";
+    for (var j = 0; j < normalizedEdited.length; j++) {
+      var key = normalizedEdited[j];
+      if (!key) continue;
+      if (counts[key] > 1) duplicatesToReject[key] = true;
+    }
 
-  try {
-    SpreadsheetApp.getUi().alert(msg);
-  } catch (err) {
-    SpreadsheetApp.getActive().toast(msg, "Validacion", 5);
-  }
+    var duplicateKeys = Object.keys(duplicatesToReject);
+    if (!duplicateKeys.length) return true;
 
-  return false;
-}
+    var replaceValues = [];
+    for (var k = 0; k < editValues.length; k++) {
+      var keyEdited = normalizedEdited[k];
+      var current = editValues[k][0];
 
-function columnToIndex(col) {
-  if (typeof col === "number") return col;
-  return SheetUtils.columnaIndice(String(col));
-}
+      if (!keyEdited || !duplicatesToReject[keyEdited]) {
+        replaceValues.push([current]);
+        continue;
+      }
 
-/**
- * Formatea valor como texto sin formato
- * @param {array} columnas
- * @returns
- */
+      var isSingleCellEdit =
+        range.getNumRows() === 1 && range.getNumColumns() === 1;
+      if (isSingleCellEdit && e.oldValue !== undefined) {
+        replaceValues.push([e.oldValue]);
+      } else {
+        replaceValues.push([""]);
+      }
+    }
 
-function formatearComoTexto(e, columnas) {
-  if (!e || !e.range || !columnas || !columnas.length) return;
+    sheet
+      .getRange(procStart, watchIndex, replaceValues.length, 1)
+      .setValues(replaceValues);
 
-  var rango = e.range;
-  var hoja = rango.getSheet();
-  var editFirstCol = rango.getColumn();
-  var editLastCol = editFirstCol + rango.getNumColumns() - 1;
-  var filaInicio = rango.getRow();
-  var totalFilas = rango.getNumRows();
+    var msg =
+      "No se permiten duplicados en la columna " +
+      watchCol +
+      ". Valor duplicado eliminado.";
 
-  var columnasObjetivo = columnas.map(function (c) {
-    return typeof c === "number" ? c : columnToIndex(String(c).toUpperCase());
-  });
+    try {
+      SpreadsheetApp.getUi().alert(msg);
+    } catch (err) {
+      SpreadsheetApp.getActive().toast(msg, "Validacion", 5);
+    }
 
-  for (var i = 0; i < columnasObjetivo.length; i++) {
-    var col = columnasObjetivo[i];
-    if (col < editFirstCol || col > editLastCol) continue;
+    return false;
+  },
 
-    var subRango = hoja.getRange(filaInicio, col, totalFilas, 1);
-    var valoresPlano = subRango.getDisplayValues();
+  /**
+   * Formatea valor como texto sin formato
+   * @param {array} columnas
+   * @returns
+   */
 
-    subRango
-      .setNumberFormat("@")
-      .setValues(valoresPlano)
-      .setHorizontalAlignment("center")
-      .setVerticalAlignment("middle")
-      .setFontWeight("normal")
-      .setFontSize(10);
-  }
-}
+  formatearComoTexto: function (e, columnas) {
+    if (!e || !e.range || !columnas || !columnas.length) return;
 
-function parsearDuracion(texto) {
-  if (!texto || typeof texto !== "string") return null;
+    var rango = e.range;
+    var hoja = rango.getSheet();
+    var editFirstCol = rango.getColumn();
+    var editLastCol = editFirstCol + rango.getNumColumns() - 1;
+    var filaInicio = rango.getRow();
+    var totalFilas = rango.getNumRows();
 
-  var match = texto.match(/^\s*(\d+)\s*d\s+(\d+)\s*h\s+(\d+)\s*m\s*$/i);
+    var columnasObjetivo = columnas.map(function (c) {
+      return SheetUtils.columnToIndex(c);
+    });
 
-  if (!match) return null;
+    for (var i = 0; i < columnasObjetivo.length; i++) {
+      var col = columnasObjetivo[i];
+      if (col < editFirstCol || col > editLastCol) continue;
 
-  var dias = parseInt(match[1], 10);
-  var horas = parseInt(match[2], 10);
-  var mins = parseInt(match[3], 10);
+      var subRango = hoja.getRange(filaInicio, col, totalFilas, 1);
+      var valoresPlano = subRango.getDisplayValues();
 
-  return dias * 1440 + horas * 60 + mins;
-}
+      subRango
+        .setNumberFormat("@")
+        .setValues(valoresPlano)
+        .setHorizontalAlignment("center")
+        .setVerticalAlignment("middle")
+        .setFontWeight("normal")
+        .setFontSize(10);
+    }
+  },
 
-function calcularDiasBK(
-  nombreHoja,
-  colFecha,
-  colTextoBK,
-  colMinutosBL,
-  filaInicio,
-) {
-  var hojaObjetivo = nombreHoja || "DATA";
-  var columnaFecha = colFecha || 36;
-  var columnaTexto = colTextoBK || 63;
-  var columnaMinutos = colMinutosBL || 64;
-  var filaInicial = filaInicio || 4;
+  parsearDuracion: function (texto) {
+    if (!texto || typeof texto !== "string") return null;
 
-  if (!Number.isInteger(filaInicial) || filaInicial < 1) {
-    throw new Error(
-      "calcularDiasBK: 'filaInicio' debe ser un entero mayor o igual a 1.",
-    );
-  }
+    var match = texto.match(/^\s*(\d+)\s*d\s+(\d+)\s*h\s+(\d+)\s*m\s*$/i);
 
-  var hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(hojaObjetivo);
+    if (!match) return null;
 
-  if (!hoja) {
-    throw new Error(
-      'calcularDiasBK: no existe la hoja "' + hojaObjetivo + '".',
-    );
-  }
+    var dias = parseInt(match[1], 10);
+    var horas = parseInt(match[2], 10);
+    var mins = parseInt(match[3], 10);
 
-  var ultimaFila = hoja.getLastRow();
+    return dias * 1440 + horas * 60 + mins;
+  },
 
-  if (ultimaFila < filaInicial) {
+  actualizarTiempoTranscurridoEnColumnas: function (
+    nombreHoja,
+    colFecha,
+    colTextoBK,
+    colMinutosBL,
+    filaInicio,
+  ) {
+    var hojaObjetivo = nombreHoja || "DATA";
+    var columnaFecha = colFecha || 36;
+    var columnaTexto = colTextoBK || 63;
+    var columnaMinutos = colMinutosBL || 64;
+    var filaInicial = filaInicio || 4;
+
+    if (!Number.isInteger(filaInicial) || filaInicial < 1) {
+      throw new Error(
+        "actualizarTiempoTranscurridoEnColumnas: 'filaInicio' debe ser un entero mayor o igual a 1.",
+      );
+    }
+
+    var hoja =
+      SpreadsheetApp.getActiveSpreadsheet().getSheetByName(hojaObjetivo);
+
+    if (!hoja) {
+      throw new Error(
+        'actualizarTiempoTranscurridoEnColumnas: no existe la hoja "' +
+          hojaObjetivo +
+          '".',
+      );
+    }
+
+    var ultimaFila = hoja.getLastRow();
+
+    if (ultimaFila < filaInicial) {
+      return {
+        filasProcesadas: 0,
+      };
+    }
+
+    var numFilas = ultimaFila - filaInicial + 1;
+
+    hoja
+      .getRange(filaInicial, columnaFecha, numFilas, 1)
+      .setNumberFormat("dd/MM/yyyy HH:mm:ss");
+
+    var rangoFechas = hoja
+      .getRange(filaInicial, columnaFecha, numFilas, 1)
+      .getValues();
+    var ahora = new Date();
+
+    var textoBK = [];
+    var minutosBL = [];
+
+    for (var i = 0; i < rangoFechas.length; i++) {
+      var raw = rangoFechas[i][0];
+
+      if (!raw) {
+        textoBK.push([""]);
+        minutosBL.push([""]);
+        continue;
+      }
+
+      var fecha = raw instanceof Date ? raw : new Date(raw);
+
+      if (isNaN(fecha.getTime())) {
+        textoBK.push([""]);
+        minutosBL.push([""]);
+        continue;
+      }
+
+      var diffMs = ahora - fecha;
+
+      if (diffMs < 0) {
+        textoBK.push([""]);
+        minutosBL.push([""]);
+        continue;
+      }
+
+      var dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      var horas = Math.floor(
+        (diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+      );
+      var minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      var totalMinutos = dias * 1440 + horas * 60 + minutos;
+
+      textoBK.push([dias + "d " + horas + "h " + minutos + "m"]);
+      minutosBL.push([totalMinutos]);
+    }
+
+    hoja
+      .getRange(filaInicial, columnaTexto, textoBK.length, 1)
+      .setValues(textoBK);
+    hoja
+      .getRange(filaInicial, columnaMinutos, minutosBL.length, 1)
+      .setValues(minutosBL);
+
     return {
-      filasProcesadas: 0,
+      filasProcesadas: numFilas,
     };
-  }
-
-  var numFilas = ultimaFila - filaInicial + 1;
-
-  hoja
-    .getRange(filaInicial, columnaFecha, numFilas, 1)
-    .setNumberFormat("dd/MM/yyyy HH:mm:ss");
-
-  var rangoFechas = hoja
-    .getRange(filaInicial, columnaFecha, numFilas, 1)
-    .getValues();
-  var ahora = new Date();
-
-  var textoBK = [];
-  var minutosBL = [];
-
-  for (var i = 0; i < rangoFechas.length; i++) {
-    var raw = rangoFechas[i][0];
-
-    if (!raw) {
-      textoBK.push([""]);
-      minutosBL.push([""]);
-      continue;
-    }
-
-    var fecha = raw instanceof Date ? raw : new Date(raw);
-
-    if (isNaN(fecha.getTime())) {
-      textoBK.push([""]);
-      minutosBL.push([""]);
-      continue;
-    }
-
-    var diffMs = ahora - fecha;
-
-    if (diffMs < 0) {
-      textoBK.push([""]);
-      minutosBL.push([""]);
-      continue;
-    }
-
-    var dias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    var horas = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    var minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    var totalMinutos = dias * 1440 + horas * 60 + minutos;
-
-    textoBK.push([dias + "d " + horas + "h " + minutos + "m"]);
-    minutosBL.push([totalMinutos]);
-  }
-
-  hoja
-    .getRange(filaInicial, columnaTexto, textoBK.length, 1)
-    .setValues(textoBK);
-  hoja
-    .getRange(filaInicial, columnaMinutos, minutosBL.length, 1)
-    .setValues(minutosBL);
-
-  return {
-    filasProcesadas: numFilas,
-  };
-}
+  },
+}; // SheetUtils
