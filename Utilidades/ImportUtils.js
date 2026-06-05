@@ -1,14 +1,13 @@
 var ImportUtils = {
   /**
-   * Importa un CSV recibido como Blob.
-   *
-   * @param {Object} config
-   * @param {Blob} config.blob
-   * @param {string} config.sheetName
-   * @param {number} config.startRow
-   * @param {number} config.startColumn
-   * @param {boolean} config.clearBeforeImport
+   * @typedef {Object} ImportCsvConfig
+   * @property {Blob} blob
+   * @property {string} sheetName
+   * @property {number} [startRow=1]
+   * @property {number} [startColumn=1]
+   * @property {boolean} [clearBeforeImport=false]
    */
+
   importarCsvDesdeBlob: function (config) {
     if (!config) {
       throw new Error(
@@ -16,51 +15,54 @@ var ImportUtils = {
       );
     }
 
-    if (!config.blob) {
+    const {
+      blob,
+      sheetName,
+      startRow = 1,
+      startColumn = 1,
+      clearBeforeImport = false,
+    } = config;
+
+    if (!blob) {
       throw new Error("ImportUtils.importarCsvDesdeBlob: blob es obligatorio.");
     }
 
-    if (!config.sheetName) {
+    if (!sheetName) {
       throw new Error(
         "ImportUtils.importarCsvDesdeBlob: sheetName es obligatorio.",
       );
     }
 
-    const hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(
-      config.sheetName,
-    );
+    const hoja =
+      SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
 
     if (!hoja) {
-      throw new Error(`No existe la hoja '${config.sheetName}'.`);
+      throw new Error(`No existe la hoja '${sheetName}'.`);
     }
 
-    const contenido = config.blob.getDataAsString("UTF-8");
-
-    const datos = Utilities.parseCsv(contenido);
+    const contenido = blob.getDataAsString("UTF-8");
+    const datos = Utilities.parseCsv(contenido, ";");
 
     if (!datos || datos.length === 0) {
       throw new Error("El archivo CSV no contiene datos.");
     }
 
-    const filaInicio = config.startRow || 1;
-    const columnaInicio = config.startColumn || 1;
-
-    if (config.clearBeforeImport === true) {
+    if (clearBeforeImport) {
       const ultimaFila = hoja.getMaxRows();
       const ultimaColumna = hoja.getMaxColumns();
 
       hoja
         .getRange(
-          filaInicio,
-          columnaInicio,
-          ultimaFila - filaInicio + 1,
-          ultimaColumna - columnaInicio + 1,
+          startRow,
+          startColumn,
+          ultimaFila - startRow + 1,
+          ultimaColumna - startColumn + 1,
         )
         .clearContent();
     }
 
     hoja
-      .getRange(filaInicio, columnaInicio, datos.length, datos[0].length)
+      .getRange(startRow, startColumn, datos.length, datos[0].length)
       .setValues(datos);
 
     return {
