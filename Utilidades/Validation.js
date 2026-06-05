@@ -52,7 +52,19 @@ var SheetValidation = {
       )
       .setDataValidation(regla);
   },
+
+  /**
+   * Crea múltiples listas desplegables.
+   *
+   * @param {Object[]} configs
+   */
   crearListasDesplegables: function (configs) {
+    if (!Array.isArray(configs)) {
+      throw new Error(
+        "SheetValidation.crearListasDesplegables: configs debe ser un arreglo.",
+      );
+    }
+
     configs.forEach((config) => {
       this.crearListaDesplegable(config);
     });
