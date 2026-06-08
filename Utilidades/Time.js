@@ -137,4 +137,71 @@ var Time = {
       filasProcesadas: filas,
     };
   },
+  /**
+   * Calcula los minutos transcurridos desde una fecha hasta ahora
+   * y los escribe en una columna.
+   *
+   * @param {string} nombreHoja
+   * @param {string} columnaFecha
+   * @param {string} columnaDestino
+   * @param {number} [filaInicial=2]
+   * @returns {{filasProcesadas:number}}
+   */
+  actualizarMinutosColumna: function (
+    nombreHoja,
+    columnaFecha,
+    columnaDestino,
+    filaInicial,
+  ) {
+    filaInicial = filaInicial || 2;
+
+    var hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nombreHoja);
+
+    if (!hoja) {
+      throw new Error(
+        'Time.actualizarMinutosColumna: no existe la hoja "' +
+          nombreHoja +
+          '".',
+      );
+    }
+
+    var colFecha = SheetUtils.columnToIndex(columnaFecha);
+    var colDestino = SheetUtils.columnToIndex(columnaDestino);
+
+    var ultimaFila = hoja.getLastRow();
+
+    if (ultimaFila < filaInicial) {
+      return {
+        filasProcesadas: 0,
+      };
+    }
+
+    var filas = ultimaFila - filaInicial + 1;
+
+    var fechas = hoja.getRange(filaInicial, colFecha, filas, 1).getValues();
+
+    var resultados = [];
+    var ahora = new Date();
+
+    for (var i = 0; i < fechas.length; i++) {
+      var fechaInicio = fechas[i][0];
+
+      if (!fechaInicio) {
+        resultados.push([""]);
+        continue;
+      }
+
+      var duracion = this.calcularDuracion(fechaInicio, ahora);
+
+      resultados.push([duracion ? duracion.minutos : ""]);
+    }
+
+    hoja
+      .getRange(filaInicial, colDestino, resultados.length, 1)
+      .setValues(resultados);
+
+    return {
+      filasProcesadas: filas,
+    };
+  },
 };

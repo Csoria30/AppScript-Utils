@@ -7,6 +7,7 @@ var SheetValidation = {
    * @param {string} config.columna
    * @param {string[]} config.opciones
    * @param {number} [config.filaInicial=2]
+   * @param {number} [config.cantidadFilas]
    */
   crearListaDesplegable: function (config) {
     if (!config) {
@@ -15,7 +16,13 @@ var SheetValidation = {
       );
     }
 
-    const { nombreHoja, columna, opciones, filaInicial = 2 } = config;
+    const {
+      nombreHoja,
+      columna,
+      opciones,
+      filaInicial = 2,
+      cantidadFilas,
+    } = config;
 
     if (!nombreHoja) {
       throw new Error("nombreHoja es obligatorio.");
@@ -36,20 +43,20 @@ var SheetValidation = {
       throw new Error(`No existe la hoja '${nombreHoja}'.`);
     }
 
-    const columnaIndice = UltilsScipts.SheetUtils.columnaAIndice(columna);
+    const columnaIndice = SheetUtils.columnToIndex(columna);
 
     const regla = SpreadsheetApp.newDataValidation()
       .requireValueInList(opciones, true)
       .setAllowInvalid(false)
       .build();
 
+    const filas =
+      Number.isInteger(cantidadFilas) && cantidadFilas > 0
+        ? cantidadFilas
+        : hoja.getMaxRows() - filaInicial + 1;
+
     hoja
-      .getRange(
-        filaInicial,
-        columnaIndice,
-        hoja.getMaxRows() - filaInicial + 1,
-        1,
-      )
+      .getRange(filaInicial, columnaIndice, filas, 1)
       .setDataValidation(regla);
   },
 

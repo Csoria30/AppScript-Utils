@@ -13,15 +13,16 @@ Devuelve la fecha y hora actual utilizando el formato y zona horaria especificad
 ## Sintaxis
 
 ```javascript
-DateUtils.fechaActual(formato, zonaHoraria);
+DateUtils.fechaActual(config);
 ```
 
 ## Parámetros
 
 | Parámetro | Tipo | Requerido | Descripción |
 |-----------|------|-----------|-------------|
-| `formato` | string | Sí | Formato de salida de la fecha. |
-| `zonaHoraria` | string | Sí | Zona horaria compatible con Apps Script. |
+| `config` | Object | No | Configuración opcional de formato y zona horaria. |
+| `config.formato` | string | No | Formato de salida de la fecha. Valor por defecto: `dd/MM/yyyy`. |
+| `config.zonaHoraria` | string | No | Zona horaria compatible con Apps Script. Valor por defecto: `America/Argentina/Buenos_Aires`. |
 
 ## Retorno
 
@@ -29,19 +30,35 @@ DateUtils.fechaActual(formato, zonaHoraria);
 string
 ```
 
-Fecha formateada según los parámetros recibidos.
+Fecha formateada según la configuración recibida.
 
 ---
 
 ## Ejemplos
 
+### Utilizando valores por defecto
+
+```javascript
+const fecha = DateUtils.fechaActual();
+
+Logger.log(fecha);
+```
+
+Resultado:
+
+```text
+03/06/2026
+```
+
+---
+
 ### Fecha ISO
 
 ```javascript
-const fecha = DateUtils.fechaActual(
-  "yyyy-MM-dd",
-  "UTC"
-);
+const fecha = DateUtils.fechaActual({
+  formato: "yyyy-MM-dd",
+  zonaHoraria: "UTC"
+});
 
 Logger.log(fecha);
 ```
@@ -57,10 +74,10 @@ Resultado:
 ### Fecha y hora
 
 ```javascript
-const fechaHora = DateUtils.fechaActual(
-  "dd/MM/yyyy HH:mm:ss",
-  "America/Argentina/Buenos_Aires"
-);
+const fechaHora = DateUtils.fechaActual({
+  formato: "dd/MM/yyyy HH:mm:ss",
+  zonaHoraria: "America/Argentina/Buenos_Aires"
+});
 ```
 
 Resultado:
@@ -74,16 +91,36 @@ Resultado:
 ### Formato para nombres de archivos
 
 ```javascript
-const nombreArchivo = DateUtils.fechaActual(
-  "yyyyMMdd_HHmmss",
-  "UTC"
-);
+const nombreArchivo = DateUtils.fechaActual({
+  formato: "yyyyMMdd_HHmmss",
+  zonaHoraria: "UTC"
+});
 ```
 
 Resultado:
 
 ```text
 20260603_173025
+```
+
+---
+
+### Solo cambiar el formato
+
+```javascript
+const fecha = DateUtils.fechaActual({
+  formato: "yyyy-MM-dd"
+});
+```
+
+---
+
+### Solo cambiar la zona horaria
+
+```javascript
+const fecha = DateUtils.fechaActual({
+  zonaHoraria: "UTC"
+});
 ```
 
 ---
@@ -107,10 +144,7 @@ Atajo para obtener la fecha actual en formato argentino.
 Internamente utiliza:
 
 ```javascript
-DateUtils.fechaActual(
-  "dd/MM/yyyy",
-  "America/Argentina/Buenos_Aires"
-);
+DateUtils.fechaActual();
 ```
 
 ## Sintaxis
@@ -173,7 +207,9 @@ datos.fechaCreacion = DateUtils.fechaArgentina();
 
 ✅ Utilizar `fechaActual()` cuando se necesite control total sobre formato y zona horaria.
 
-✅ Utilizar `fechaArgentina()` para proyectos destinados a usuarios en Argentina.
+✅ Aprovechar los valores por defecto cuando se trabaje con fechas en Argentina.
+
+✅ Utilizar un objeto de configuración para mejorar la legibilidad del código.
 
 ✅ Guardar fechas en formato ISO (`yyyy-MM-dd`) cuando se procesarán posteriormente.
 

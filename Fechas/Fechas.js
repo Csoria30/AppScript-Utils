@@ -2,15 +2,17 @@ var DateUtils = {
   /**
    * Devuelve la fecha actual con formato y zona horaria configurables.
    *
-   * @param {string} [formato="dd/MM/yyyy"] Formato compatible con Utilities.formatDate.
-   * @param {string} [zonaHoraria="America/Argentina/Buenos_Aires"] Zona horaria IANA.
+   * @param {Object} [config={}] Configuración opcional.
+   * @param {string} [config.formato="dd/MM/yyyy"] Formato compatible con Utilities.formatDate.
+   * @param {string} [config.zonaHoraria="America/Argentina/Buenos_Aires"] Zona horaria IANA.
    * @returns {string} Fecha formateada.
    */
-  fechaActual: function (formato, zonaHoraria) {
-    const formatoFinal = formato || "dd/MM/yyyy";
-    const zonaFinal = zonaHoraria || "America/Argentina/Buenos_Aires";
+  fechaActual: function (config) {
+    config = config || {};
+    const zonaHoraria = config.zonaHoraria || "America/Argentina/Buenos_Aires";
+    const formato = config.formato || "dd/MM/yyyy";
 
-    return Utilities.formatDate(new Date(), zonaFinal, formatoFinal);
+    return Utilities.formatDate(new Date(), zonaHoraria, formato);
   },
 
   /**
