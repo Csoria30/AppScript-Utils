@@ -145,6 +145,7 @@ var SheetUtils = {
     stampCol,
     startRow,
     clearStampOnEmpty,
+    onlyIfEmpty,
   ) {
     if (!e || !e.range) return;
     var range = e.range;
@@ -153,6 +154,7 @@ var SheetUtils = {
 
     startRow = startRow || 2;
     if (clearStampOnEmpty === undefined) clearStampOnEmpty = true;
+    if (onlyIfEmpty === undefined) onlyIfEmpty = false;
 
     var watchIndex = SheetUtils.columnToIndex(watchCol);
     var stampIndex = SheetUtils.columnToIndex(stampCol);
@@ -176,11 +178,22 @@ var SheetUtils = {
     var now = new Date();
 
     for (var i = 0; i < watchVals.length; i++) {
-      var v = watchVals[i][0];
-      if (v !== "" && v !== null) {
-        stampValues.push([now]);
+      var value = watchVals[i][0];
+      var existingStamp = existingStamps[i][0];
+
+      var hasExistingStamp =
+        existingStamp !== "" &&
+        existingStamp !== null &&
+        existingStamp !== undefined;
+
+      if (value !== "" && value !== null && value !== undefined) {
+        if (onlyIfEmpty && hasExistingStamp) {
+          stampValues.push([existingStamp]);
+        } else {
+          stampValues.push([now]);
+        }
       } else {
-        stampValues.push([clearStampOnEmpty ? "" : existingStamps[i][0]]);
+        stampValues.push([clearStampOnEmpty ? "" : existingStamp]);
       }
     }
 
@@ -277,37 +290,52 @@ var SheetUtils = {
     emailCol,
     startRow,
     clearOnEmpty,
+    onlyIfEmpty,
   ) {
     if (!e || !e.range) return;
+
     var range = e.range;
     var sheet = range.getSheet();
+
     if (sheet.getName() !== sheetName) return;
 
     startRow = startRow || 2;
-    if (typeof clearOnEmpty === "undefined") clearOnEmpty = true;
+
+    if (typeof clearOnEmpty === "undefined") {
+      clearOnEmpty = true;
+    }
+
+    if (typeof onlyIfEmpty === "undefined") {
+      onlyIfEmpty = false;
+    }
 
     var watchIndex = SheetUtils.columnToIndex(watchCol);
     var emailIndex = SheetUtils.columnToIndex(emailCol);
 
     var editFirstCol = range.getColumn();
     var editLastCol = editFirstCol + range.getNumColumns() - 1;
+
     if (watchIndex < editFirstCol || watchIndex > editLastCol) return;
 
     var firstRow = range.getRow();
     var lastRow = firstRow + range.getNumRows() - 1;
     var procStart = Math.max(firstRow, startRow);
     var numRows = lastRow - procStart + 1;
+
     if (numRows <= 0) return;
 
     var watchVals = sheet
       .getRange(procStart, watchIndex, numRows, 1)
       .getValues();
-    var existingEmails = sheet
-      .getRange(procStart, emailIndex, numRows, 1)
-      .getValues();
+
+    var emailRange = sheet.getRange(procStart, emailIndex, numRows, 1);
+
+    var existingEmails = emailRange.getValues();
+
     var out = [];
 
     var userEmail = "";
+
     try {
       userEmail = Session.getActiveUser().getEmail();
     } catch (err) {
@@ -315,15 +343,26 @@ var SheetUtils = {
     }
 
     for (var i = 0; i < watchVals.length; i++) {
-      var val = watchVals[i][0];
-      if (val !== "" && val !== null && val !== undefined) {
-        out.push([userEmail || existingEmails[i][0] || ""]);
+      var value = watchVals[i][0];
+      var existingEmail = existingEmails[i][0];
+
+      var hasExistingEmail =
+        existingEmail !== "" &&
+        existingEmail !== null &&
+        existingEmail !== undefined;
+
+      if (value !== "" && value !== null && value !== undefined) {
+        if (onlyIfEmpty && hasExistingEmail) {
+          out.push([existingEmail]);
+        } else {
+          out.push([userEmail || existingEmail || ""]);
+        }
       } else {
-        out.push([clearOnEmpty ? "" : existingEmails[i][0]]);
+        out.push([clearOnEmpty ? "" : existingEmail]);
       }
     }
 
-    sheet.getRange(procStart, emailIndex, numRows, 1).setValues(out);
+    emailRange.setValues(out);
   },
 
   /**
@@ -593,5 +632,27 @@ var SheetUtils = {
     return {
       filasProcesadas: numFilas,
     };
+  },
+
+  /**
+   * Escribe un arreglo horizontal en una fila determinada.
+   *
+   * @param {string} nombreHoja
+   * @param {number} fila
+   * @param {string[]} encabezados
+   */
+  escribirFila: function (nombreHoja, fila, encabezados) {
+    if (!Array.isArray(encabezados) || encabezados.length === 0) {
+      throw new Error("encabezados debe ser un arreglo con datos.");
+    }
+
+    const hoja =
+      SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nombreHoja);
+
+    if (!hoja) {
+      throw new Error(`No existe la hoja '${nombreHoja}'.`);
+    }
+
+    hoja.getRange(fila, 1, 1, encabezados.length).setValues([encabezados]);
   },
 }; // SheetUtils
