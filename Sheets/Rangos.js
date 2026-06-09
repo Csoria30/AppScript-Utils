@@ -655,4 +655,102 @@ var SheetUtils = {
 
     hoja.getRange(fila, 1, 1, encabezados.length).setValues([encabezados]);
   },
+
+  /**
+   * Registra auditoría de modificación sobre un rango de columnas.
+   *
+   * Cuando se edita cualquier celda comprendida entre
+   * `firstWatchCol` y `lastWatchCol`, actualiza:
+   * - La fecha y hora de modificación.
+   * - El correo del usuario que realizó la modificación.
+   *
+   * Permite auditar cambios sobre un registro completo
+   * sin necesidad de monitorear cada columna por separado.
+   *
+   * @param {Object} e Evento recibido por el trigger onEdit.
+   * @param {string} sheetName Nombre de la hoja a monitorear.
+   * @param {string|number} firstWatchCol Primera columna a observar.
+   * @param {string|number} lastWatchCol Última columna a observar.
+   * @param {string|number} timestampCol Columna donde se registrará la fecha de modificación.
+   * @param {string|number} userCol Columna donde se registrará el correo del usuario que modificó.
+   * @param {number} [startRow=2] Fila mínima desde la cual comenzar a procesar.
+   *
+   * @returns {void}
+   *
+   * @example
+   * SheetUtils.setAuditOnEdit(
+   *   e,
+   *   "STOCK",
+   *   "A",
+   *   "K",
+   *   "O",
+   *   "P",
+   *   2
+   * );
+   */
+
+  setAuditOnEdit: function (
+    e,
+    sheetName,
+    firstWatchCol,
+    lastWatchCol,
+    timestampCol,
+    userCol,
+    startRow,
+  ) {
+    if (!e || !e.range) return;
+
+    var range = e.range;
+    var sheet = range.getSheet();
+
+    if (sheet.getName() !== sheetName) return;
+
+    startRow = startRow || 2;
+
+    var firstWatchIndex = SheetUtils.columnToIndex(firstWatchCol);
+    var lastWatchIndex = SheetUtils.columnToIndex(lastWatchCol);
+
+    var timestampIndex = SheetUtils.columnToIndex(timestampCol);
+    var userIndex = SheetUtils.columnToIndex(userCol);
+
+    var editFirstCol = range.getColumn();
+    var editLastCol = editFirstCol + range.getNumColumns() - 1;
+
+    // Verifica si la edición toca alguna columna monitoreada
+    if (editLastCol < firstWatchIndex || editFirstCol > lastWatchIndex) {
+      return;
+    }
+
+    var firstRow = range.getRow();
+    var lastRow = firstRow + range.getNumRows() - 1;
+
+    var procStart = Math.max(firstRow, startRow);
+    var numRows = lastRow - procStart + 1;
+
+    if (numRows <= 0) return;
+
+    var now = new Date();
+
+    var userEmail = "";
+
+    try {
+      userEmail = Session.getActiveUser().getEmail();
+    } catch (err) {
+      userEmail = "";
+    }
+
+    var timestampValues = [];
+    var userValues = [];
+
+    for (var i = 0; i < numRows; i++) {
+      timestampValues.push([now]);
+      userValues.push([userEmail]);
+    }
+
+    sheet
+      .getRange(procStart, timestampIndex, numRows, 1)
+      .setValues(timestampValues);
+
+    sheet.getRange(procStart, userIndex, numRows, 1).setValues(userValues);
+  },
 }; // SheetUtils
