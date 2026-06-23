@@ -110,14 +110,14 @@ Utilidades/
 
 ## Documentación
 
-| Módulo                                    | Descripción                       |
-| ----------------------------------------- | --------------------------------- |
-| [Funciones Base](docs/basicas.md)         | Operaciones básicas sobre Sheets  |
-| [Rangos](docs/rangos.md)                  | Utilidades para rangos y columnas |
+| Módulo                                       | Descripción                       |
+| -------------------------------------------- | --------------------------------- |
 | [Automatizaciones](docs/automatizaciones.md) | Helpers para eventos              |
-| [Menús](docs/menus.md)                    | Creación de menús personalizados  |
-| [Formato](docs/formatos.md)               | Aplicación de estilos             |
-| [Fechas](docs/fechas.md)                  | Utilidades de fecha y hora        |
+| [Funciones Base](docs/basicas.md)            | Operaciones básicas sobre Sheets  |
+| [Rangos](docs/rangos.md)                     | Utilidades para rangos y columnas |
+| [Menús](docs/menus.md)                       | Creación de menús personalizados  |
+| [Formato](docs/formatos.md)                  | Aplicación de estilos             |
+| [Fechas](docs/fechas.md)                     | Utilidades de fecha y hora        |
 
 ---
 

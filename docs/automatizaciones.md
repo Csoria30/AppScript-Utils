@@ -22,17 +22,18 @@ function onEdit(e) {
 
 | Función                               | Descripción                                                |
 | ------------------------------------- | ---------------------------------------------------------- |
-| `setTimestampOnEdit()`                | Registra fecha y hora cuando se modifica una celda.        |
-| `setHyperlinkInSameCellOnEdit()`      | Convierte automáticamente el valor ingresado en un enlace. |
-| `setUserEmailOnEdit()`                | Guarda el correo del usuario que realizó la edición.       |
-| `bloquearDuplicadosEnColumnaOnEdit()` | Evita valores duplicados en una columna.                   |
-| `formatearComoTexto()`                | Fuerza columnas a formato texto.                           |
-| `aplicarFormatoColumna()`             | Aplica formatos personalizados a columnas específicas.     |
+| [`setTimestampOnEdit()`](#setTimestampOnEdit)                | Registra fecha y hora cuando se modifica una celda.        |
+| [`setHyperlinkInSameCellOnEdit()`](#setHyperlinkInSameCellOnEdit)      | Convierte automáticamente el valor ingresado en un enlace. |
+| [`setUserEmailOnEdit()`](#setUserEmailOnEdit)                | Guarda el correo del usuario que realizó la edición.       |
+| [`bloquearDuplicadosEnColumnaOnEdit()`](#bloquearDuplicadosEnColumnaOnEdit) | Evita valores duplicados en una columna.                   |
+| [`formatearComoTexto()`](#formatearComoTexto)                | Fuerza columnas a formato texto.                           |
+
 
 ---
 
 <br><br><br><br>
 
+<a id="setTimestampOnEdit"></a>
 # 🕒setTimestampOnEdit
 
 Registra automáticamente una fecha y hora cuando se modifica una celda determinada.
@@ -169,8 +170,9 @@ Registrar cuándo una tarea fue creada o modificada por última vez.
 
 <br><br><br><br>
 
-<!-- Comment: setHyperlinkInSameCellOnEdit -->
 
+<a id="setHyperlinkInSameCellOnEdit"></a>
+<!-- Comment: setHyperlinkInSameCellOnEdit -->
 # 🕒setHyperlinkInSameCellOnEdit
 
 Convierte automáticamente el valor ingresado en una celda en un hipervínculo.
@@ -266,8 +268,9 @@ Construir URLs dinámicas utilizando códigos o identificadores.
 
 <br><br><br><br>
 
-<!-- Comment: setUserEmailOnEdit -->
 
+<a id="setUserEmailOnEdit"></a>
+<!-- Comment: setUserEmailOnEdit -->
 # 👤setUserEmailOnEdit
 
 Registra automáticamente el correo electrónico del usuario que realizó una modificación en una hoja.
@@ -412,8 +415,10 @@ Registrar automáticamente responsables de aprobaciones, validaciones o cambios 
 
 <br><br><br><br>
 
-<!-- Comment: bloquearDuplicadosEnColumnaOnEdit -->
 
+
+<a id="bloquearDuplicadosEnColumnaOnEdit"></a>
+<!-- Comment: bloquearDuplicadosEnColumnaOnEdit -->
 # 🚫 bloquearDuplicadosEnColumnaOnEdit
 
 Impide que se ingresen valores duplicados dentro de una columna determinada.
@@ -593,6 +598,7 @@ Controlar que no existan números de expediente duplicados.
 
 
 
+<a id="formatearComoTexto"></a>
 <!-- Comment: formatearComoTexto -->
 # 📄 formatearComoTexto
 Aplica formato de texto a una o varias columnas cuando se realiza una edición.
