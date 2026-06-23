@@ -753,4 +753,57 @@ var SheetUtils = {
 
     sheet.getRange(procStart, userIndex, numRows, 1).setValues(userValues);
   },
+
+  /**
+   * Actualiza una lista desplegable dependiente.
+   *
+   * @param {GoogleAppsScript.Events.SheetsOnEdit} e
+   * @param {number} colOrigen
+   * @param {number} colDestino
+   * @param {Object<string, string[]>} opciones
+   * @param {boolean} [limpiarDestino=true]
+   * @param {boolean} [permitirInvalidos=false]
+   */
+  setListaDependiente: function (
+    e,
+    sheetName,
+    colOrigen,
+    colDestino,
+    opciones,
+    limpiarDestino = true,
+    permitirInvalidos = false,
+  ) {
+    if (!e || !e.range) return;
+
+    const sheet = e.range.getSheet();
+
+    // Validar hoja
+    if (sheet.getName() !== sheetName) return;
+
+    const colOrigenIndex = SheetUtils.columnToIndex(colOrigen);
+    const colDestinoIndex = SheetUtils.columnToIndex(colDestino);
+
+    const row = e.range.getRow();
+
+    const valorOrigen = sheet.getRange(row, colOrigenIndex).getValue();
+
+    const celdaDestino = sheet.getRange(row, colDestinoIndex);
+
+    if (limpiarDestino) {
+      celdaDestino.clearContent();
+    }
+
+    celdaDestino.clearDataValidations();
+
+    const lista = opciones[valorOrigen] || [];
+
+    if (!lista.length) return;
+
+    const regla = SpreadsheetApp.newDataValidation()
+      .requireValueInList(lista, true)
+      .setAllowInvalid(permitirInvalidos)
+      .build();
+
+    celdaDestino.setDataValidation(regla);
+  },
 }; // SheetUtils
