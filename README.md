@@ -1,205 +1,95 @@
-# UtilsAppScript
+# 📖 FuncionesBase
 
-Biblioteca de utilidades para Google Apps Script orientada a Google Sheets.
+Funciones de acceso rápido para trabajar con Google Sheets.
 
-Permite simplificar tareas frecuentes como:
-
-- 📄 Manipulación de hojas y rangos
-- 🎨 Formato de celdas
-- 📅 Manejo de fechas y horarios
-- 🖱️ Menús personalizados
-- ⚡ Automatizaciones con `onEdit`
+Este módulo encapsula las operaciones más comunes sobre libros, hojas, rangos y celdas, evitando repetir código en cada proyecto.
 
 ---
 
-## Características
+## 📚 Resumen de funciones
 
-### Utilidades básicas
-
-- Obtener hojas y rangos
-- Lectura y escritura de celdas
-- Navegación simplificada sobre Sheets
-
-### Rangos
-
-- Conversión de columnas (`A` → `1`, `BL` → `64`)
-- Limpieza masiva de datos
-- Helpers para trabajar con bloques de información
-
-### Automatizaciones
-
-- Timestamp automático
-- Hipervínculos automáticos
-- Registro de usuario editor
-- Prevención de duplicados
-
-### Funciones DATA reutilizables
-
-- Limpieza configurable de bloques de datos
-- Cálculo de antigüedad en formato legible y en minutos
-- Parseo de duraciones tipo Xd Yh Zm
-
-### Formato
-
-- Centrado de contenido
-- Formatos reutilizables
-- Aplicación automática de estilos
-
-### Menús personalizados
-
-- Creación dinámica de menús
-- Separadores automáticos
-- Configuración mediante arrays
-
-### Fechas
-
-- Fechas formateadas
-- Soporte para zonas horarias
-- Helpers para Argentina
+| Función | Retorno | Descripción |
+|----------|----------|-------------|
+| `obtenerLibroActivo()` | `Spreadsheet` | Devuelve el libro activo. |
+| `obtenerHoja(nombreHoja)` | `Sheet` | Obtiene una hoja por nombre. |
+| `obtenerRangoA1(nombreHoja, notacionA1)` | `Range` | Obtiene un rango utilizando notación A1. |
+| `obtenerRango(nombreHoja, fila, columna, cantidadFilas, cantidadColumnas)` | `Range` | Obtiene un rango mediante coordenadas numéricas. |
+| `obtenerCelda(nombreHoja, fila, columna)` | `Range` | Obtiene una única celda. |
+| `obtenerValorCelda(nombreHoja, fila, columna)` | `any` | Devuelve el valor de una celda. |
+| `escribirValorCelda(nombreHoja, fila, columna, valor)` | `void` | Escribe un valor en una celda. |
+| `obtenerUltimaFila(nombreHoja)` | `number` | Devuelve la última fila con datos. |
+| `obtenerUltimaColumna(nombreHoja)` | `number` | Devuelve la última columna con datos. |
 
 ---
 
-## Instalación
+<!-- Comment: obtenerRango -->
 
-### Requisitos
+# 📐 obtenerRango
 
-- Node.js
-- clasp
+Obtiene un rango utilizando coordenadas numéricas.
 
-```bash
-npm install -g @google/clasp
-```
-
-### Login
-
-```bash
-clasp login
-```
-
-### Publicar cambios
-
-```bash
-clasp push
-```
-
-### Crear versión
-
-```bash
-clasp version "feat: nueva funcionalidad"
-```
-
-### Publicar biblioteca
-
-Apps Script → Deploy → Manage Deployments → New Deployment → Library
-
----
-
-## Estructura
-
-```text
-Fechas/
-  Fechas.js
-Sheets/
-  Rangos.js
-  SheetFormat.js
-UI/
-  Menu.js
-Utilidades/
-  Basicas.js
-```
-
-## Documentación
-
-| Módulo                                       | Descripción                       |
-| -------------------------------------------- | --------------------------------- |
-| [Automatizaciones](docs/automatizaciones.md) | Helpers para eventos              |
-| [Funciones Base](docs/basicas.md)            | Operaciones básicas sobre Sheets  |
-| [Rangos](docs/rangos.md)                     | Utilidades para rangos y columnas |
-| [Menús](docs/menus.md)                       | Creación de menús personalizados  |
-| [Formato](docs/formatos.md)                  | Aplicación de estilos             |
-| [Fechas](docs/fechas.md)                     | Utilidades de fecha y hora        |
-
----
-
-## Ejemplo rápido
+## ⚙️ Sintaxis
 
 ```javascript
-function ejemplo() {
-  var hoja = FuncionesBase.obtenerHoja("DATA");
-
-  var valor = FuncionesBase.obtenerValorCelda("DATA", 2, 1);
-
-  Logger.log(valor);
-
-  MenuUtils.crearMenu("Herramientas", [
-    ["Importar", "importarDatos"],
-    ["-"],
-    ["Configuración", "abrirConfig"],
-  ]);
-}
-
-function ejemploData() {
-  // Limpia DATA desde A4 hasta BL.
-  SheetUtils.limpiarRangoDatos(
-    "DATA",
-    4,
-    SheetUtils.columnaIndice("A"),
-    SheetUtils.columnaIndice("BL"),
-  );
-
-  // También se puede reutilizar en otra hoja o rango.
-  SheetUtils.limpiarRangoDatos(
-    "BACKLOG",
-    2,
-    SheetUtils.columnaIndice("A"),
-    SheetUtils.columnaIndice("Z"),
-  );
-
-  // Convierte "3d 5h 32m" a minutos.
-  var total = parsearDuracion("3d 5h 32m");
-  Logger.log(total); // 5012
-
-  // Calcula antigüedad desde col AJ y escribe en BK/BL.
-  calcularDiasBK();
-}
-```
-
-## API adicional en Sheets/Rangos.js
-
-SheetUtils.limpiarRangoDatos(nombreHoja, filaInicial, columnaInicial, cantidadColumnas, filaFinal)
-
-- Reemplaza el uso de limpiarDATA para evitar lógica duplicada.
-- Ejemplo DATA A4:BL ultima fila:
-
-```javascript
-SheetUtils.limpiarRangoDatos(
-  "DATA",
-  4,
-  SheetUtils.columnaIndice("A"),
-  SheetUtils.columnaIndice("BL"),
+FuncionesBase.obtenerRango(
+  nombreHoja,
+  fila,
+  columna,
+  cantidadFilas,
+  cantidadColumnas
 );
 ```
 
-parsearDuracion(texto)
+## 📝 Parámetros
 
-- Entrada esperada: "Xd Yh Zm" (ejemplo: "0d 19h 11m").
-- Devuelve minutos totales o null si el formato no coincide.
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `nombreHoja` | string | Nombre de la hoja. |
+| `fila` | number | Fila inicial. |
+| `columna` | number | Columna inicial. |
+| `cantidadFilas` | number | Cantidad de filas a obtener. Opcional. |
+| `cantidadColumnas` | number | Cantidad de columnas a obtener. Opcional. |
 
-calcularDiasBK(nombreHoja, colFecha, colTextoBK, colMinutosBL, filaInicio)
-
-- Por defecto: DATA, fecha en AJ(36), salida texto en BK(63) y minutos en BL(64), desde fila 4.
-- Calcula diferencia contra fecha/hora actual y completa columnas de salida.
-
-formatearComoTexto(e, columnas)
-
-- Reemplaza el uso de aplicarFormatoColumna para evitar alias duplicado.
+## 🔧 Valores por defecto
 
 ```javascript
-function onEdit(e) {
-  formatearComoTexto(e, ["G", "H"]);
-}
+cantidadFilas = 1
+cantidadColumnas = 1
 ```
 
-## Licencia
+## ↩️ Retorno
 
-MIT
+```javascript
+Range
+```
+
+## 💡 Ejemplo
+
+```javascript
+const rango =
+  FuncionesBase.obtenerRango(
+    "DATA",
+    2,
+    1,
+    10,
+    4
+  );
+```
+
+Equivale a:
+
+```javascript
+hoja.getRange(2, 1, 10, 4);
+```
+
+## ⚠️ Excepciones
+
+La función lanzará un error cuando:
+
+- `fila < 1`
+- `columna < 1`
+- `cantidadFilas < 1`
+- `cantidadColumnas < 1`
+- La hoja no exista
+
+---
